@@ -1,0 +1,9 @@
+[package]
+name = "graphplay3"
+version = "0.1.0"
+authors = ["Andrew Watts <ahwatts@gmail.com>"]
+
+[dependencies]
+gfx = "^0.16.1"
+glutin = "^0.8.1"
+gfx_window_glutin = "^0.16.0"
