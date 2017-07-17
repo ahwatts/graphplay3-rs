@@ -6,10 +6,12 @@ extern crate nalgebra;
 extern crate gfx;
 
 use gfx::{Device, Encoder};
-use gfx::format::{Srgba8, Depth};
 use gfx::traits::FactoryExt;
 use glutin::{Event, EventsLoop, VirtualKeyCode, WindowBuilder};
 use nalgebra::*;
+
+type ColorType = gfx::format::Rgba8;
+type DepthType = gfx::format::Depth;
 
 gfx_defines! {
     vertex Vertex {
@@ -27,8 +29,8 @@ gfx_defines! {
         vertices: gfx::VertexBuffer<Vertex> = (),
         model: gfx::Global<[[f32; 4]; 4]> = "model",
         view_and_projection: gfx::ConstantBuffer<ViewAndProjection> = "view_and_projection",
-        out_color: gfx::RenderTarget<Srgba8> = "FragColor",
-        out_depth: gfx::DepthTarget<Depth> = gfx::preset::depth::LESS_EQUAL_WRITE,
+        out_color: gfx::RenderTarget<ColorType> = "FragColor",
+        out_depth: gfx::DepthTarget<DepthType> = gfx::preset::depth::LESS_EQUAL_WRITE,
     }
 }
 
@@ -44,7 +46,7 @@ fn main() {
         mut factory,
         render_target,
         depth_target
-    ) = gfx_window_glutin::init::<Srgba8, Depth>(builder, &events_loop);
+    ) = gfx_window_glutin::init::<ColorType, DepthType>(builder, &events_loop);
 
     let mut encoder: Encoder<_, _> = factory.create_command_buffer().into();
 
@@ -77,6 +79,8 @@ fn main() {
         out_color: render_target,
         out_depth: depth_target,
     };
+
+    let mut angle = 0.0;
 
     let view_matrix = Isometry3::look_at_rh(
         &Point3::new(0.0, 0.0, 10.0),
@@ -121,8 +125,15 @@ fn main() {
             }
         });
 
+        angle += 6.28 / 100000.0;
+        if angle > 6.28 {
+            angle -= 6.28;
+        }
+        let model_matrix = Rotation3::from_euler_angles(angle, angle / 2.0, 0.0);
+
         encoder.clear(&mut data.out_color, [0.0, 0.0, 0.0, 1.0]);
         encoder.clear_depth(&mut data.out_depth, 1.0);
+        data.model = model_matrix.to_homogeneous().into();
         encoder.update_constant_buffer(&data.view_and_projection, &vp_elem);
         encoder.draw(&octo_elems, &pso, &data);
         encoder.flush(&mut device);
