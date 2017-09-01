@@ -7,7 +7,7 @@ extern crate gfx;
 
 use gfx::{Device, Encoder};
 use gfx::traits::FactoryExt;
-use glutin::{Event, EventsLoop, VirtualKeyCode, WindowBuilder};
+use glutin::{ContextBuilder, EventsLoop, GlContext, VirtualKeyCode, WindowBuilder};
 use nalgebra::*;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -54,10 +54,11 @@ const FRAME_PERIOD: f32 = 1.0 / 60.0;
 // const TIME_STEP: f32 = 1.0 / 300.0;
 
 fn main() {
-    let events_loop = EventsLoop::new();
-    let builder = WindowBuilder::new()
+    let mut events_loop = EventsLoop::new();
+    let window_builder = WindowBuilder::new()
         .with_title("graphplay3")
         .with_dimensions(800, 600);
+    let context_builder = ContextBuilder::new();
 
     let (
         window,
@@ -65,7 +66,7 @@ fn main() {
         mut factory,
         render_target,
         depth_target
-    ) = gfx_window_glutin::init::<ColorType, DepthType>(builder, &events_loop);
+    ) = gfx_window_glutin::init::<ColorType, DepthType>(window_builder, context_builder, &events_loop);
 
     let mut encoder: Encoder<_, _> = factory.create_command_buffer().into();
 
@@ -127,22 +128,31 @@ fn main() {
         let subsecs = elapsed.subsec_nanos() as f32 / 1.0e9;
         let ftime = secs + subsecs;
 
-        events_loop.poll_events(|Event::WindowEvent { window_id: _, event }| {
-            use glutin::WindowEvent::*;
+        events_loop.poll_events(|event| {
+            use glutin::Event::*;
             match event {
-                KeyboardInput(_, _, Some(VirtualKeyCode::Escape), _) | Closed => {
-                    running = false;
-                },
-                Resized(_, _) => {
-                    gfx_window_glutin::update_views(&window, &mut data.out_color, &mut data.out_depth);
-                    let (width, height, _, _) = data.out_color.get_dimensions();
-                    proj_matrix = Perspective3::new(
-                        width as f32 / height as f32,
-                        3.14 / 6.0,
-                        0.01,
-                        100.0,
-                    );
-                    vp_elem.projection = proj_matrix.to_homogeneous().into();
+                WindowEvent { event: window_event, .. } => {
+                    use glutin::WindowEvent::*;
+                    match window_event {
+                        KeyboardInput { input: glutin::KeyboardInput { virtual_keycode: Some(VirtualKeyCode::Escape), .. }, .. } => {
+                            running = false;
+                        },
+                        Closed => {
+                            running = false;
+                        },
+                        Resized(_, _) => {
+                            gfx_window_glutin::update_views(&window, &mut data.out_color, &mut data.out_depth);
+                            let (width, height, _, _) = data.out_color.get_dimensions();
+                            proj_matrix = Perspective3::new(
+                                width as f32 / height as f32,
+                                3.14 / 6.0,
+                                0.01,
+                                100.0,
+                            );
+                            vp_elem.projection = proj_matrix.to_homogeneous().into();
+                        },
+                        _ => {},
+                    }
                 },
                 _ => {},
             }
@@ -169,13 +179,14 @@ fn main() {
         frame_count += 1;
         let update_secs = (update_duration.as_secs() as f32) +
             (update_duration.subsec_nanos() as f32 / 1.0e9);
-        avg_update_secs = avg_update_secs + (update_secs - avg_update_secs)/(frame_count as f32);
+        let frame_count_float: f32 = frame_count as f32;
+        avg_update_secs = avg_update_secs + ((update_secs - avg_update_secs) / frame_count_float);
 
         if update_duration < frame_period {
             let sleep_duration = frame_period - update_duration;
             let sleep_secs = (sleep_duration.as_secs() as f32) +
                 (sleep_duration.subsec_nanos() as f32 / 1.0e9);
-            avg_sleep_secs = avg_sleep_secs + (sleep_secs - avg_sleep_secs)/(frame_count as f32);
+            avg_sleep_secs = avg_sleep_secs + ((sleep_secs - avg_sleep_secs) / frame_count_float);
 
             thread::sleep(sleep_duration);
 
@@ -183,7 +194,7 @@ fn main() {
             let real_sleep_duration = real_sleep_time - update_time;
             let real_sleep_secs = (real_sleep_duration.as_secs() as f32) +
                 (real_sleep_duration.subsec_nanos() as f32 / 1.0e9);
-            avg_real_sleep_secs = avg_real_sleep_secs + (real_sleep_secs - avg_real_sleep_secs)/(frame_count as f32);
+            avg_real_sleep_secs = avg_real_sleep_secs + ((real_sleep_secs - avg_real_sleep_secs) / frame_count_float);
         }
     }
 }
