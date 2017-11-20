@@ -5,6 +5,8 @@ extern crate nalgebra;
 #[macro_use]
 extern crate gfx;
 
+mod gpgfx;
+
 use gfx::{Device, Encoder};
 use gfx::traits::FactoryExt;
 use glutin::{ContextBuilder, EventsLoop, GlContext, VirtualKeyCode, WindowBuilder};
