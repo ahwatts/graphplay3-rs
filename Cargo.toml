@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Andrew Watts <ahwatts@gmail.com>"]
 
 [dependencies]
-gfx = "^0.16.1"
-glutin = "^0.11.0"
-gfx_window_glutin = "^0.19.0"
-nalgebra = "^0.13.0"
+gfx = "^0.17.1"
+glutin = "^0.14.0"
+gfx_window_glutin = "^0.22.0"
+nalgebra = "^0.14.0"
